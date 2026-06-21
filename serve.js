@@ -21,14 +21,14 @@ http.createServer((request, response) => {
   const filePath = path.resolve(root, `.${urlPath}`);
   if (!filePath.startsWith(root)) {
     response.writeHead(403);
-    response.end('Forbidden');
+    response.end('Доступ запрещен');
     return;
   }
 
   fs.readFile(filePath, (error, data) => {
     if (error) {
       response.writeHead(404);
-      response.end('Not found');
+      response.end('Не найдено');
       return;
     }
 
@@ -39,5 +39,5 @@ http.createServer((request, response) => {
     response.end(data);
   });
 }).listen(port, '127.0.0.1', () => {
-  console.log(`Avatar editor site: http://127.0.0.1:${port}/`);
+  console.log(`Редактор аватара: http://127.0.0.1:${port}/`);
 });

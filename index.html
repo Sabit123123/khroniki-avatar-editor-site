@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Avatar Layer Editor</title>
+  <title>Редактор слоев аватара</title>
   <style>
     :root {
       --bg: #1f1b16;
@@ -327,61 +327,61 @@
 </head>
 <body>
 <header>
-  <h1>Avatar Layer Editor</h1>
-  <div class="mini">Drag selected layer. Arrows move 1px, Shift+arrows move 5px.</div>
+  <h1>Редактор слоев аватара</h1>
+  <div class="mini">Перетаскивай выбранный слой. Стрелки двигают на 1 px, Shift+стрелки - на 5 px.</div>
 </header>
 
 <main>
   <section>
-    <h2>Layers</h2>
+    <h2>Слои</h2>
     <div id="layerList"></div>
     <div class="buttons">
-      <button class="secondary" id="selectPrev">Up</button>
-      <button class="secondary" id="selectNext">Down</button>
-      <button class="danger" id="resetAll">Reset all</button>
+      <button class="secondary" id="selectPrev">Выше</button>
+      <button class="secondary" id="selectNext">Ниже</button>
+      <button class="danger" id="resetAll">Сбросить все</button>
     </div>
     <p class="hint">
-      Coordinates use the same 128x128 logical space as the PNG assets.
-      The preview is rendered at 4x scale.
+      Координаты используют то же логическое поле 128x128, что и PNG-слои.
+      Предпросмотр показан в увеличенном масштабе.
     </p>
   </section>
 
   <section class="preview-panel">
-    <h2>Preview</h2>
+    <h2>Предпросмотр</h2>
     <div id="mobileSummary" class="mobile-summary"></div>
     <div id="stage" class="stack">
       <div class="crosshair"></div>
     </div>
-    <div class="nudge-pad" aria-label="Move selected layer">
+    <div class="nudge-pad" aria-label="Сдвинуть выбранный слой">
       <button class="empty" tabindex="-1"></button>
-      <button data-nudge="0,-1" aria-label="Move up">&uarr;</button>
+      <button data-nudge="0,-1" aria-label="Сдвинуть вверх">&uarr;</button>
       <button class="empty" tabindex="-1"></button>
-      <button data-nudge="-1,0" aria-label="Move left">&larr;</button>
-      <button data-nudge="0,1" aria-label="Move down">&darr;</button>
-      <button data-nudge="1,0" aria-label="Move right">&rarr;</button>
+      <button data-nudge="-1,0" aria-label="Сдвинуть влево">&larr;</button>
+      <button data-nudge="0,1" aria-label="Сдвинуть вниз">&darr;</button>
+      <button data-nudge="1,0" aria-label="Сдвинуть вправо">&rarr;</button>
     </div>
-    <div class="scale-pad" aria-label="Scale selected layer">
+    <div class="scale-pad" aria-label="Изменить размер выбранного слоя">
       <button class="secondary" data-scale="-0.03">- Уменьшить</button>
       <button class="secondary" data-scale="0.03">+ Увеличить</button>
     </div>
     <div class="buttons">
-      <button id="copyJson">Copy JSON</button>
-      <button class="secondary" id="copyDart">Copy Dart map</button>
-      <button class="secondary" id="downloadJson">Download JSON</button>
+      <button id="copyJson">Копировать JSON</button>
+      <button class="secondary" id="copyDart">Копировать карту Dart</button>
+      <button class="secondary" id="downloadJson">Скачать JSON</button>
     </div>
     <div id="status" class="status"></div>
   </section>
 
   <section class="export-panel">
-    <h2>Selected layer</h2>
-    <label>Layer</label>
+    <h2>Выбранный слой</h2>
+    <label>Слой</label>
     <select id="layerSelect"></select>
 
-    <label>Asset path</label>
+    <label>Путь к изображению</label>
     <select id="assetPreset"></select>
     <input id="assetPath" type="text" spellcheck="false">
 
-    <label><input id="visible" type="checkbox"> Visible</label>
+    <label><input id="visible" type="checkbox"> Видимый</label>
 
     <label>dx</label>
     <div class="grid2">
@@ -395,22 +395,22 @@
       <input id="dy" type="number" step="0.25">
     </div>
 
-    <label>scale</label>
+    <label>масштаб</label>
     <div class="grid2">
       <input id="scaleRange" type="range" min="0.1" max="1.8" step="0.01">
       <input id="scale" type="number" step="0.01">
     </div>
 
     <div class="buttons">
-      <button id="resetLayer" class="secondary">Reset layer</button>
-      <button id="hideOthers" class="secondary">Solo</button>
-      <button id="showAll" class="secondary">Show all</button>
+      <button id="resetLayer" class="secondary">Сбросить слой</button>
+      <button id="hideOthers" class="secondary">Только этот</button>
+      <button id="showAll" class="secondary">Показать все</button>
     </div>
 
-    <label>Export / import JSON</label>
+    <label>Экспорт / импорт JSON</label>
     <textarea id="jsonBox" spellcheck="false"></textarea>
     <div class="buttons">
-      <button id="applyJson">Apply JSON</button>
+      <button id="applyJson">Применить JSON</button>
     </div>
   </section>
 </main>
@@ -986,18 +986,18 @@ const assetGroups = {
 };
 
 const defaults = [
-  { key: 'background', label: 'Background', dx: 0, dy: 0, scale: 1, visible: true, path: assetGroups.background[0] },
-  { key: 'aura', label: 'Aura', dx: 0, dy: 0, scale: 1, visible: false, path: '' },
-  { key: 'base', label: 'Base body', dx: 0, dy: 0, scale: 1, visible: false, path: assetGroups.base[0] },
-  { key: 'hairBack', label: 'Hair back', dx: 0, dy: -20.75, scale: 0.55, visible: true, path: assetGroups.hairBack[0] },
-  { key: 'outfit', label: 'HQ body / outfit', dx: 0, dy: 0, scale: 1, visible: true, path: defaultHqOutfit },
-  { key: 'head', label: 'Head', dx: 0, dy: -20.75, scale: 0.55, visible: true, path: assetGroups.head[0] },
-  { key: 'face', label: 'Face overlay', dx: 0, dy: -20.75, scale: 0.55, visible: false, path: '' },
-  { key: 'eyes', label: 'Eyes', dx: 0, dy: -20.75, scale: 0.55, visible: true, path: assetGroups.eyes[0] },
-  { key: 'hairFront', label: 'Hair front', dx: 0, dy: -20.75, scale: 0.55, visible: true, path: assetGroups.hairFront[0] },
-  { key: 'weapon', label: 'Weapon', dx: 32, dy: 10.25, scale: 0.62, visible: false, path: assetGroups.weapon[1] },
-  { key: 'accessory', label: 'Accessory', dx: 0, dy: 0, scale: 1, visible: false, path: '' },
-  { key: 'frame', label: 'Frame', dx: 0, dy: 0, scale: 1, visible: true, path: assetGroups.frame[0] }
+  { key: 'background', label: 'Фон', dx: 0, dy: 0, scale: 1, visible: true, path: assetGroups.background[0] },
+  { key: 'aura', label: 'Аура', dx: 0, dy: 0, scale: 1, visible: false, path: '' },
+  { key: 'base', label: 'Базовое тело', dx: 0, dy: 0, scale: 1, visible: false, path: assetGroups.base[0] },
+  { key: 'hairBack', label: 'Задняя часть волос', dx: 0, dy: -20.75, scale: 0.55, visible: true, path: assetGroups.hairBack[0] },
+  { key: 'outfit', label: 'HQ тело / одежда', dx: 0, dy: 0, scale: 1, visible: true, path: defaultHqOutfit },
+  { key: 'head', label: 'Голова', dx: 0, dy: -20.75, scale: 0.55, visible: true, path: assetGroups.head[0] },
+  { key: 'face', label: 'Наложение лица', dx: 0, dy: -20.75, scale: 0.55, visible: false, path: '' },
+  { key: 'eyes', label: 'Глаза', dx: 0, dy: -20.75, scale: 0.55, visible: true, path: assetGroups.eyes[0] },
+  { key: 'hairFront', label: 'Передняя часть волос', dx: 0, dy: -20.75, scale: 0.55, visible: true, path: assetGroups.hairFront[0] },
+  { key: 'weapon', label: 'Оружие', dx: 32, dy: 10.25, scale: 0.62, visible: false, path: assetGroups.weapon[1] },
+  { key: 'accessory', label: 'Аксессуар', dx: 0, dy: 0, scale: 1, visible: false, path: '' },
+  { key: 'frame', label: 'Рамка', dx: 0, dy: 0, scale: 1, visible: true, path: assetGroups.frame[0] }
 ];
 
 let layers = JSON.parse(JSON.stringify(defaults));
@@ -1073,7 +1073,7 @@ function renderStage() {
     img.alt = l.label;
     img.style.transform = `translate(${l.dx * z}px, ${l.dy * z}px) scale(${l.scale})`;
     img.style.opacity = l.key === selected ? '1' : '.92';
-    img.onerror = () => setStatus(`Cannot load: ${normalizedPath(l.path)}`);
+    img.onerror = () => setStatus(`Не удалось загрузить: ${normalizedPath(l.path)}`);
     stage.insertBefore(img, crosshair);
   }
 }
@@ -1109,13 +1109,13 @@ function renderControls() {
   for (const p of presets) {
     const opt = document.createElement('option');
     opt.value = p;
-    opt.textContent = p ? p.split('/').pop() : '(none)';
+    opt.textContent = p ? p.split('/').pop() : '(нет)';
     assetPreset.appendChild(opt);
   }
   if (!presets.includes(l.path)) {
     const custom = document.createElement('option');
     custom.value = l.path;
-    custom.textContent = '(custom)';
+    custom.textContent = '(свой путь)';
     assetPreset.appendChild(custom);
   }
   assetPreset.value = l.path;
@@ -1125,7 +1125,7 @@ function renderControls() {
   dy.value = dyRange.value = l.dy;
   scale.value = scaleRange.value = l.scale;
   jsonBox.value = JSON.stringify(layerExport(), null, 2);
-  mobileSummary.textContent = `${l.label}: dx ${Number(l.dx).toFixed(2)}, dy ${Number(l.dy).toFixed(2)}, scale ${Number(l.scale).toFixed(2)}`;
+  mobileSummary.textContent = `${l.label}: dx ${Number(l.dx).toFixed(2)}, dy ${Number(l.dy).toFixed(2)}, масштаб ${Number(l.scale).toFixed(2)}`;
 }
 
 function sync() {
@@ -1148,7 +1148,7 @@ async function copyText(text, okMessage) {
   } catch (_) {
     jsonBox.focus();
     jsonBox.select();
-    setStatus('Text is ready in the field below');
+    setStatus('Текст готов в поле ниже');
   }
 }
 
@@ -1209,15 +1209,15 @@ document.getElementById('applyJson').onclick = () => {
       l.scale = Number(incoming.scale || 1);
     }
     sync();
-    setStatus('JSON applied');
+    setStatus('JSON применен');
   } catch (e) {
-    setStatus(`Invalid JSON: ${e.message}`);
+    setStatus(`Ошибка JSON: ${e.message}`);
   }
 };
 
 document.getElementById('copyJson').onclick = async () => {
   const text = JSON.stringify(layerExport(), null, 2);
-  await copyText(text, 'JSON copied');
+  await copyText(text, 'JSON скопирован');
 };
 
 document.getElementById('copyDart').onclick = async () => {
@@ -1227,7 +1227,7 @@ document.getElementById('copyDart').onclick = async () => {
     lines.push(`  '${key}': AvatarLayerTweak(dx: ${v.dx}, dy: ${v.dy}, scale: ${v.scale}, visible: ${v.visible}),`);
   }
   lines.push('};');
-  await copyText(lines.join('\n'), 'Dart map copied');
+  await copyText(lines.join('\n'), 'Карта Dart скопирована');
 };
 
 document.getElementById('downloadJson').onclick = () => {

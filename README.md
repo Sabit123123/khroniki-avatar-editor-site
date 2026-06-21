@@ -1,17 +1,23 @@
-# Khroniki Avatar Editor
+# Редактор аватара Хроник Казначея
 
-Static GitHub Pages version of the avatar layer editor for Khroniki Kaznacheya.
+Статическая GitHub Pages-версия редактора слоев аватара для проекта
+«Хроники Казначея».
 
-Open `index.html` locally or publish this repository with GitHub Pages from the
-`main` branch root.
+Локально открой `index.html` или запусти:
 
-Recommended repository name:
+```powershell
+node serve.js
+```
+
+Публикация рассчитана на GitHub Pages из корня ветки `main`.
+
+Репозиторий:
 
 ```text
 khroniki-avatar-editor-site
 ```
 
-Expected public URL after GitHub Pages is enabled:
+Публичная ссылка:
 
 ```text
 https://sabit123123.github.io/khroniki-avatar-editor-site/
