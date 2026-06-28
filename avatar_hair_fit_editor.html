@@ -86,6 +86,13 @@
       outline: 4px solid #d38b2b;
       overflow: hidden;
       image-rendering: pixelated;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .stage.dragging {
+      cursor: grabbing;
     }
 
     .stage::before,
@@ -377,6 +384,9 @@
         <img id="eyesImg" class="layer-img" alt="">
         <img id="hairFrontImg" class="layer-img" alt="">
       </div>
+      <div class="small">
+        В рамке: один палец двигает активный слой, два пальца меняют масштаб.
+      </div>
 
       <div class="status" id="runtimeNotice">
         Если рамка пустая, открой этот HTML именно в Chrome/браузере, а не во встроенном просмотрщике файлов. Для работы нужен JavaScript.
@@ -657,6 +667,7 @@
       step: document.getElementById('stepInput'),
       json: document.getElementById('jsonBox'),
       notice: document.getElementById('runtimeNotice'),
+      stage: document.getElementById('stage'),
       imgs: {
         hairBack: document.getElementById('hairBackImg'),
         head: document.getElementById('headImg'),
@@ -759,7 +770,7 @@
       return cloneTweak(head.head || base);
     }
 
-    function setTweak(layer, tweak) {
+    function setTweak(layer, tweak, options = {}) {
       const { gender, headId, eyesId, hairId } = currentIds();
       const head = ensureHead(gender, headId);
       const clean = cloneTweak(tweak);
@@ -771,7 +782,7 @@
       } else if (layer === 'head') {
         head.head = clean;
       }
-      saveLocal();
+      if (options.save !== false) saveLocal();
     }
 
     function saveCurrent() {
@@ -930,6 +941,94 @@
       render();
     }
 
+    function stageUnit() {
+      return els.stage.clientWidth / 128;
+    }
+
+    function distanceBetween(a, b) {
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+
+    function midpointBetween(a, b) {
+      return {
+        x: (a.clientX + b.clientX) / 2,
+        y: (a.clientY + b.clientY) / 2,
+      };
+    }
+
+    const pointers = new Map();
+    let gesture = null;
+
+    function startDrag(pointer) {
+      gesture = {
+        type: 'drag',
+        layer: activeLayer,
+        pointerId: pointer.pointerId,
+        startX: pointer.clientX,
+        startY: pointer.clientY,
+        startTweak: tweakFor(activeLayer),
+      };
+    }
+
+    function startPinch() {
+      const activePointers = [...pointers.values()];
+      if (activePointers.length < 2) return;
+      const [a, b] = activePointers;
+      gesture = {
+        type: 'pinch',
+        layer: activeLayer,
+        startDistance: Math.max(1, distanceBetween(a, b)),
+        startMid: midpointBetween(a, b),
+        startTweak: tweakFor(activeLayer),
+      };
+    }
+
+    function applyGesture() {
+      if (!gesture) return;
+      const unit = stageUnit();
+      if (!unit) return;
+
+      if (gesture.type === 'drag') {
+        const pointer = pointers.get(gesture.pointerId);
+        if (!pointer) return;
+        const next = cloneTweak(gesture.startTweak);
+        next.dx = round(gesture.startTweak.dx + (pointer.clientX - gesture.startX) / unit);
+        next.dy = round(gesture.startTweak.dy + (pointer.clientY - gesture.startY) / unit);
+        setTweak(gesture.layer, next, { save: false });
+        render();
+        return;
+      }
+
+      if (gesture.type === 'pinch' && pointers.size >= 2) {
+        const [a, b] = [...pointers.values()];
+        const distance = Math.max(1, distanceBetween(a, b));
+        const mid = midpointBetween(a, b);
+        const next = cloneTweak(gesture.startTweak);
+        next.dx = round(gesture.startTweak.dx + (mid.x - gesture.startMid.x) / unit);
+        next.dy = round(gesture.startTweak.dy + (mid.y - gesture.startMid.y) / unit);
+        next.scale = round(
+          Math.max(0.02, Math.min(1.5, gesture.startTweak.scale * distance / gesture.startDistance)),
+          4,
+        );
+        setTweak(gesture.layer, next, { save: false });
+        render();
+      }
+    }
+
+    function finishGesture(pointerId) {
+      pointers.delete(pointerId);
+      if (pointers.size >= 2) {
+        startPinch();
+      } else if (pointers.size === 1) {
+        startDrag([...pointers.values()][0]);
+      } else {
+        gesture = null;
+        els.stage.classList.remove('dragging');
+        saveLocal();
+        updateJsonBox();
+      }
+    }
+
     function moveNext(delta) {
       if (!sequence.length) buildSequence(currentGender());
       saveCurrent();
@@ -1071,6 +1170,34 @@
     };
     document.getElementById('importBtn').onclick = importJson;
     document.getElementById('clearBtn').onclick = clearLocal;
+
+    els.stage.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      els.stage.setPointerCapture(event.pointerId);
+      pointers.set(event.pointerId, event);
+      els.stage.classList.add('dragging');
+      if (pointers.size >= 2) {
+        startPinch();
+      } else {
+        startDrag(event);
+      }
+    });
+
+    els.stage.addEventListener('pointermove', event => {
+      if (!pointers.has(event.pointerId)) return;
+      event.preventDefault();
+      pointers.set(event.pointerId, event);
+      applyGesture();
+    });
+
+    els.stage.addEventListener('pointerup', event => {
+      event.preventDefault();
+      finishGesture(event.pointerId);
+    });
+
+    els.stage.addEventListener('pointercancel', event => {
+      finishGesture(event.pointerId);
+    });
 
     document.addEventListener('keydown', event => {
       if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') {
