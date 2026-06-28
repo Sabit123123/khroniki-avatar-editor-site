@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Подстановка голов</title>
+  <style>
+    :root {
+      --bg: #251d15;
+      --panel: #332719;
+      --panel-2: #46331f;
+      --line: #9a6728;
+      --paper: #efdca6;
+      --ink: #fff0c8;
+      --muted: #c9ad76;
+      --gold: #efb641;
+      --green: #3f8339;
+      --red: #a84a34;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.35 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      padding: 14px 18px;
+      border-bottom: 2px solid var(--line);
+      background: #7f4d1b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 300px minmax(520px, 1fr) 340px;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      color: var(--gold);
+      font-size: 15px;
+      text-transform: uppercase;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    select, input, button, textarea {
+      width: 100%;
+      font: inherit;
+    }
+
+    select, input, textarea {
+      border: 2px solid #6f4b22;
+      border-radius: 6px;
+      background: #f8edca;
+      color: #382515;
+      padding: 9px 10px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      background: transparent;
+    }
+
+    button {
+      min-height: 42px;
+      border: 2px solid #5f3c18;
+      border-radius: 6px;
+      background: var(--green);
+      color: #fff;
+      padding: 9px 11px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button.secondary { background: #765329; }
+    button.danger { background: var(--red); }
+    button:active { transform: translateY(1px); }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stage-wrap {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }
+
+    .stage {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      aspect-ratio: 1;
+      overflow: hidden;
+      user-select: none;
+      touch-action: none;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,.12) 1px, transparent 1px),
+        linear-gradient(rgba(0,0,0,.12) 1px, transparent 1px),
+        var(--paper);
+      background-size: 32px 32px;
+      border: 3px solid var(--line);
+    }
+
+    .stage img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: auto;
+      pointer-events: none;
+    }
+
+    #headImg {
+      transform-origin: 50% 50%;
+      cursor: grab;
+    }
+
+    .crosshair {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, transparent 49.8%, rgba(55,35,12,.32) 50%, transparent 50.2%),
+        linear-gradient(transparent 49.8%, rgba(55,35,12,.32) 50%, transparent 50.2%);
+    }
+
+    .controls {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nudge {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .nudge .empty {
+      visibility: hidden;
+    }
+
+    .status {
+      width: 100%;
+      max-width: 520px;
+      color: #5a4220;
+      background: rgba(255, 244, 207, .72);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 980px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 8px;
+      }
+
+      section {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Подстановка голов</h1>
+    <button id="downloadBtn" type="button">Скачать PNG</button>
+  </header>
+
+  <main>
+    <section>
+      <h2>Проход</h2>
+      <div class="row">
+        <button id="maleBtn" type="button">Мужской</button>
+        <button id="femaleBtn" type="button" class="secondary">Женский</button>
+      </div>
+
+      <label for="bodySelect">Тело</label>
+      <select id="bodySelect"></select>
+
+      <label for="headSelect">Голова</label>
+      <select id="headSelect"></select>
+
+      <div class="actions">
+        <button id="prevBtn" type="button" class="secondary">Назад</button>
+        <button id="nextBtn" type="button">Далее</button>
+        <button id="resetBtn" type="button" class="danger">Сбросить голову</button>
+      </div>
+    </section>
+
+    <section class="stage-wrap">
+      <div id="stage" class="stage">
+        <img id="bodyImg" alt="">
+        <img id="headImg" alt="">
+        <div class="crosshair"></div>
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section>
+      <h2>Позиция головы</h2>
+      <div class="controls">
+        <label for="xInput">X</label>
+        <input id="xInput" type="number" step="0.5">
+        <label for="yInput">Y</label>
+        <input id="yInput" type="number" step="0.5">
+        <label for="scaleInput">Масштаб</label>
+        <input id="scaleInput" type="range" min="0.05" max="1.2" step="0.005">
+        <input id="scaleNumber" type="number" min="0.05" max="1.2" step="0.005">
+      </div>
+
+      <label>Сдвиг</label>
+      <div class="nudge">
+        <button class="empty" type="button"></button>
+        <button data-nudge="0,-1" type="button" class="secondary">Вверх</button>
+        <button class="empty" type="button"></button>
+        <button data-nudge="-1,0" type="button" class="secondary">Влево</button>
+        <button data-nudge="0,1" type="button" class="secondary">Вниз</button>
+        <button data-nudge="1,0" type="button" class="secondary">Вправо</button>
+      </div>
+
+      <div class="actions">
+        <button id="saveBtn" type="button">Сохранить проход</button>
+        <button id="copyBtn" type="button" class="secondary">Копировать JSON</button>
+      </div>
+
+      <label for="jsonOut">Данные</label>
+      <textarea id="jsonOut" readonly></textarea>
+      <p class="small">Один палец двигает голову. Два пальца меняют масштаб.</p>
+    </section>
+  </main>
+
+  <script>
+    const bodyRoot = 'avatar_editor_hq_assets';
+    const headRoot = 'assets/rewards/avatar/head';
+    const savedKey = 'khroniki-head-swap-editor-v1';
+
+    const maleBodies = makeBodies('m', 1, 11);
+    const femaleBodies = makeBodies('f', 8, 11);
+    const maleHeads = [
+      ...range(1, 10).map(n => `head_m_base_gen_${pad(n)}.png`),
+      ...range(1, 10).map(n => `head_m_base_gen_b_${pad(n)}.png`)
+    ];
+    const femaleHeads = range(1, 10).map(n => `head_f_base_gen_${pad(n)}.png`);
+
+    const presets = {
+      male: { x: 0, y: -151, scale: 0.28 },
+      female: { x: 0, y: -151, scale: 0.28 }
+    };
+
+    const state = {
+      gender: 'male',
+      bodyIndex: 0,
+      headIndex: 0,
+      tweak: { ...presets.male },
+      saved: readSaved()
+    };
+
+    const els = {
+      body: document.getElementById('bodyImg'),
+      head: document.getElementById('headImg'),
+      bodySelect: document.getElementById('bodySelect'),
+      headSelect: document.getElementById('headSelect'),
+      maleBtn: document.getElementById('maleBtn'),
+      femaleBtn: document.getElementById('femaleBtn'),
+      x: document.getElementById('xInput'),
+      y: document.getElementById('yInput'),
+      scale: document.getElementById('scaleInput'),
+      scaleNumber: document.getElementById('scaleNumber'),
+      status: document.getElementById('status'),
+      json: document.getElementById('jsonOut'),
+      stage: document.getElementById('stage')
+    };
+
+    function range(from, to) {
+      return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+    }
+
+    function pad(num) {
+      return String(num).padStart(2, '0');
+    }
+
+    function makeBodies(prefix, levelFrom, levelTo) {
+      return range(levelFrom, levelTo).flatMap(level =>
+        range(1, 10).map(num => `outfit_${prefix}_lvl${pad(level)}_fullbody_${pad(num)}_hq.png`)
+      );
+    }
+
+    function bodies() {
+      return state.gender === 'male' ? maleBodies : femaleBodies;
+    }
+
+    function heads() {
+      return state.gender === 'male' ? maleHeads : femaleHeads;
+    }
+
+    function bodyPath(name) {
+      const dir = state.gender === 'male' ? 'male' : 'female';
+      return `${bodyRoot}/${dir}/${name}`;
+    }
+
+    function headPath(name) {
+      return `${headRoot}/${name}`;
+    }
+
+    function currentBody() {
+      return bodies()[state.bodyIndex] || bodies()[0];
+    }
+
+    function currentHead() {
+      return heads()[state.headIndex] || heads()[0];
+    }
+
+    function keyForCurrent() {
+      return `${state.gender}|${currentBody()}|${currentHead()}`;
+    }
+
+    function readSaved() {
+      try {
+        return JSON.parse(localStorage.getItem(savedKey) || '{}');
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function persist() {
+      localStorage.setItem(savedKey, JSON.stringify(state.saved));
+    }
+
+    function fillSelect(select, items, label) {
+      select.innerHTML = '';
+      items.forEach((item, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = `${label} ${index + 1}: ${item.replace(/_hq|\.png/g, '')}`;
+        select.appendChild(option);
+      });
+    }
+
+    function loadSavedOrPreset() {
+      state.tweak = { ...(state.saved[keyForCurrent()] || presets[state.gender]) };
+    }
+
+    function setGender(gender) {
+      state.gender = gender;
+      state.bodyIndex = 0;
+      state.headIndex = 0;
+      loadSavedOrPreset();
+      renderSelects();
+      render();
+    }
+
+    function renderSelects() {
+      fillSelect(els.bodySelect, bodies(), 'Тело');
+      fillSelect(els.headSelect, heads(), 'Голова');
+      els.bodySelect.value = String(state.bodyIndex);
+      els.headSelect.value = String(state.headIndex);
+      els.maleBtn.classList.toggle('secondary', state.gender !== 'male');
+      els.femaleBtn.classList.toggle('secondary', state.gender !== 'female');
+    }
+
+    function render() {
+      els.body.src = bodyPath(currentBody());
+      els.head.src = headPath(currentHead());
+      const stageScale = els.stage.getBoundingClientRect().width / 520;
+      els.head.style.transform =
+        `translate(${state.tweak.x * stageScale}px, ${state.tweak.y * stageScale}px) scale(${state.tweak.scale})`;
+      els.x.value = state.tweak.x;
+      els.y.value = state.tweak.y;
+      els.scale.value = state.tweak.scale;
+      els.scaleNumber.value = state.tweak.scale;
+      const savedCount = Object.keys(state.saved).length;
+      const data = {
+        gender: state.gender,
+        body: currentBody(),
+        head: currentHead(),
+        headTransform: {
+          x: Number(state.tweak.x),
+          y: Number(state.tweak.y),
+          scale: Number(state.tweak.scale)
+        }
+      };
+      els.status.innerHTML = `
+        <b>${state.gender === 'male' ? 'Мужской' : 'Женский'} проход</b><br>
+        Тело: <b>${currentBody()}</b><br>
+        Голова: <b>${currentHead()}</b><br>
+        Сохранено: <b>${savedCount}</b>
+      `;
+      els.json.value = JSON.stringify(data, null, 2);
+    }
+
+    function applyInputs() {
+      state.tweak.x = Number(els.x.value || 0);
+      state.tweak.y = Number(els.y.value || 0);
+      state.tweak.scale = Number(els.scaleNumber.value || els.scale.value || 0.28);
+      render();
+    }
+
+    function saveCurrent() {
+      state.saved[keyForCurrent()] = {
+        x: Number(state.tweak.x),
+        y: Number(state.tweak.y),
+        scale: Number(state.tweak.scale)
+      };
+      persist();
+      render();
+    }
+
+    function moveCurrent(delta) {
+      const next = state.bodyIndex + delta;
+      if (next < 0) {
+        state.bodyIndex = bodies().length - 1;
+      } else if (next >= bodies().length) {
+        state.bodyIndex = 0;
+      } else {
+        state.bodyIndex = next;
+      }
+      loadSavedOrPreset();
+      renderSelects();
+      render();
+    }
+
+    function nudge(dx, dy, step) {
+      state.tweak.x = Number((state.tweak.x + dx * step).toFixed(2));
+      state.tweak.y = Number((state.tweak.y + dy * step).toFixed(2));
+      render();
+    }
+
+    async function copyJson() {
+      await navigator.clipboard.writeText(els.json.value);
+    }
+
+    async function downloadPng() {
+      const size = 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      await Promise.all([decodeImage(els.body), decodeImage(els.head)]);
+      drawContain(ctx, els.body, size);
+      ctx.save();
+      const exportScale = size / 520;
+      ctx.translate(size / 2 + state.tweak.x * exportScale, size / 2 + state.tweak.y * exportScale);
+      ctx.scale(state.tweak.scale, state.tweak.scale);
+      ctx.drawImage(els.head, -size / 2, -size / 2, size, size);
+      ctx.restore();
+      const link = document.createElement('a');
+      link.download = `${state.gender}_${currentBody().replace('.png', '')}_${currentHead().replace('.png', '')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function decodeImage(img) {
+      if (img.decode) return img.decode().catch(() => {});
+      return Promise.resolve();
+    }
+
+    function drawContain(ctx, img, size) {
+      const ratio = Math.min(size / img.naturalWidth, size / img.naturalHeight);
+      const w = img.naturalWidth * ratio;
+      const h = img.naturalHeight * ratio;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+    }
+
+    let drag = null;
+    els.stage.addEventListener('pointerdown', event => {
+      els.stage.setPointerCapture(event.pointerId);
+      drag = {
+        x: event.clientX,
+        y: event.clientY,
+        startX: state.tweak.x,
+        startY: state.tweak.y
+      };
+    });
+
+    els.stage.addEventListener('pointermove', event => {
+      if (!drag) return;
+      const rect = els.stage.getBoundingClientRect();
+      const ratio = 520 / rect.width;
+      state.tweak.x = Number((drag.startX + (event.clientX - drag.x) * ratio).toFixed(2));
+      state.tweak.y = Number((drag.startY + (event.clientY - drag.y) * ratio).toFixed(2));
+      render();
+    });
+
+    els.stage.addEventListener('pointerup', () => { drag = null; });
+    els.stage.addEventListener('pointercancel', () => { drag = null; });
+
+    els.maleBtn.addEventListener('click', () => setGender('male'));
+    els.femaleBtn.addEventListener('click', () => setGender('female'));
+    els.bodySelect.addEventListener('change', () => {
+      state.bodyIndex = Number(els.bodySelect.value);
+      loadSavedOrPreset();
+      render();
+    });
+    els.headSelect.addEventListener('change', () => {
+      state.headIndex = Number(els.headSelect.value);
+      loadSavedOrPreset();
+      render();
+    });
+    document.getElementById('prevBtn').addEventListener('click', () => moveCurrent(-1));
+    document.getElementById('nextBtn').addEventListener('click', () => moveCurrent(1));
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.tweak = { ...presets[state.gender] };
+      render();
+    });
+    document.getElementById('saveBtn').addEventListener('click', saveCurrent);
+    document.getElementById('copyBtn').addEventListener('click', copyJson);
+    document.getElementById('downloadBtn').addEventListener('click', downloadPng);
+    document.querySelectorAll('[data-nudge]').forEach(button => {
+      button.addEventListener('click', event => {
+        const [dx, dy] = event.currentTarget.dataset.nudge.split(',').map(Number);
+        nudge(dx, dy, event.shiftKey ? 5 : 1);
+      });
+    });
+    [els.x, els.y].forEach(input => input.addEventListener('input', applyInputs));
+    els.scale.addEventListener('input', () => {
+      els.scaleNumber.value = els.scale.value;
+      applyInputs();
+    });
+    els.scaleNumber.addEventListener('input', () => {
+      els.scale.value = els.scaleNumber.value;
+      applyInputs();
+    });
+    window.addEventListener('resize', render);
+
+    renderSelects();
+    loadSavedOrPreset();
+    render();
+  </script>
+</body>
+</html>
