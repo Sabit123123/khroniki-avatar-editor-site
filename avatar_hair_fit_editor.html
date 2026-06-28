@@ -503,6 +503,12 @@
         <button id="clearBtn" class="danger">Очистить локальные настройки</button>
       </div>
 
+      <div class="button-row">
+        <button id="storageReportBtn" class="primary">Показать сохраненные головы</button>
+        <button id="copyStorageBtn" class="secondary">Скопировать сохранения</button>
+      </div>
+      <pre id="storageReport" class="small" style="white-space: pre-wrap; background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 6px; padding: 10px; min-height: 80px;"></pre>
+
       <p class="small">
         Горячие клавиши: стрелки двигают активный слой, Shift+стрелка двигает быстрее,
         [ и ] меняют масштаб. «Далее» автоматически сохраняет текущий вариант.
@@ -692,6 +698,7 @@
       step: document.getElementById('stepInput'),
       pass: document.getElementById('passInput'),
       json: document.getElementById('jsonBox'),
+      storageReport: document.getElementById('storageReport'),
       notice: document.getElementById('runtimeNotice'),
       stage: document.getElementById('stage'),
       imgs: {
@@ -1198,6 +1205,88 @@
       els.json.value = exportJson();
     }
 
+    function countSavedPieces(heads) {
+      const entries = Object.entries(heads || {});
+      let headTweaks = 0;
+      let eyesTweaks = 0;
+      let hairBackTweaks = 0;
+      let hairFrontTweaks = 0;
+      for (const [, head] of entries) {
+        if (head?.head) headTweaks += 1;
+        eyesTweaks += Object.keys(head?.eyes || {}).length;
+        for (const hair of Object.values(head?.hair || {})) {
+          if (hair?.back) hairBackTweaks += 1;
+          if (hair?.front) hairFrontTweaks += 1;
+        }
+      }
+      return { heads: entries.length, headTweaks, eyesTweaks, hairBackTweaks, hairFrontTweaks };
+    }
+
+    function localStorageKeysReport() {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        if (/khroniki|avatar|hair|head/i.test(key)) {
+          keys.push(`${key} (${(localStorage.getItem(key) || '').length} chars)`);
+        }
+      }
+      return keys;
+    }
+
+    function updateStorageReport() {
+      const raw = localStorage.getItem(storageKey);
+      let current = emptyData();
+      let parseError = '';
+      if (raw) {
+        try {
+          current = normalizeState(JSON.parse(raw));
+        } catch (error) {
+          parseError = String(error?.message || error);
+        }
+      }
+      const male = countSavedPieces(current.presets?.male?.heads);
+      const female = countSavedPieces(current.presets?.female?.heads);
+      const keys = localStorageKeysReport();
+      els.storageReport.textContent = [
+        `Ключ редактора: ${storageKey}`,
+        `Статус: ${raw ? 'найден' : 'не найден'}`,
+        `Размер данных: ${raw ? raw.length : 0} символов`,
+        `Обновлено: ${current.updatedAt || 'нет данных'}`,
+        parseError ? `Ошибка чтения: ${parseError}` : '',
+        '',
+        `Мужские головы: ${male.heads}`,
+        `  head: ${male.headTweaks}`,
+        `  eyes: ${male.eyesTweaks}`,
+        `  hairBack: ${male.hairBackTweaks}`,
+        `  hairFront: ${male.hairFrontTweaks}`,
+        '',
+        `Женские головы: ${female.heads}`,
+        `  head: ${female.headTweaks}`,
+        `  eyes: ${female.eyesTweaks}`,
+        `  hairBack: ${female.hairBackTweaks}`,
+        `  hairFront: ${female.hairFrontTweaks}`,
+        '',
+        'Похожие ключи localStorage:',
+        ...(keys.length ? keys.map(key => `  ${key}`) : ['  нет']),
+      ].filter(line => line !== null).join('\n');
+    }
+
+    async function copyStorage() {
+      const raw = localStorage.getItem(storageKey);
+      updateStorageReport();
+      if (!raw) {
+        els.storageReport.textContent += '\n\nКопировать нечего: сохранения для этого редактора не найдены.';
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(raw);
+        els.storageReport.textContent += '\n\nСохранения скопированы в буфер.';
+      } catch (error) {
+        els.storageReport.textContent += `\n\nНе удалось скопировать автоматически: ${String(error?.message || error)}`;
+      }
+    }
+
     function downloadJson() {
       saveCurrent();
       const blob = new Blob([exportJson()], { type: 'application/json' });
@@ -1285,6 +1374,8 @@
     };
     document.getElementById('importBtn').onclick = importJson;
     document.getElementById('clearBtn').onclick = clearLocal;
+    document.getElementById('storageReportBtn').onclick = updateStorageReport;
+    document.getElementById('copyStorageBtn').onclick = copyStorage;
 
     els.stage.addEventListener('pointerdown', event => {
       event.preventDefault();
@@ -1333,6 +1424,7 @@
     populateForGender('male');
     syncLayerButtons();
     buildSequence('male');
+    updateStorageReport();
   </script>
 </body>
 </html>
