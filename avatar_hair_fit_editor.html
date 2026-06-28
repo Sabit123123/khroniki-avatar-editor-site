@@ -145,6 +145,18 @@
       justify-content: center;
     }
 
+    .pass-jump {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) auto auto;
+      gap: 8px;
+      align-items: end;
+      width: min(100%, var(--stage));
+    }
+
+    .pass-jump input {
+      width: 100%;
+    }
+
     label {
       display: grid;
       gap: 4px;
@@ -314,6 +326,11 @@
         width: 100%;
       }
 
+      .pass-jump {
+        grid-template-columns: 1fr;
+        width: 100%;
+      }
+
       .toolbar button,
       .button-row button,
       .layer-tabs button {
@@ -376,6 +393,14 @@
         <button id="femalePass" class="secondary">Женский проход</button>
         <button id="prevBtn" class="secondary">Назад</button>
         <button id="nextBtn" class="primary">Далее</button>
+      </div>
+      <div class="pass-jump">
+        <label>
+          Номер прохода
+          <input id="passInput" type="number" min="1" step="1">
+        </label>
+        <button id="jumpPassBtn" class="secondary">Перейти</button>
+        <button id="findPlaceBtn" class="secondary">Найти место</button>
       </div>
 
       <div class="stage" id="stage">
@@ -665,6 +690,7 @@
       dy: document.getElementById('dyInput'),
       scale: document.getElementById('scaleInput'),
       step: document.getElementById('stepInput'),
+      pass: document.getElementById('passInput'),
       json: document.getElementById('jsonBox'),
       notice: document.getElementById('runtimeNotice'),
       stage: document.getElementById('stage'),
@@ -694,6 +720,7 @@
         version: 1,
         unit: 'RewardAvatarStack AvatarLayerTweak dx/dy/scale',
         createdAt: new Date().toISOString(),
+        progress: {},
         presets: { male: { heads: {} }, female: { heads: {} } },
       };
     }
@@ -716,6 +743,7 @@
         normalized.unit = data.unit || normalized.unit;
         normalized.createdAt = data.createdAt || normalized.createdAt;
         normalized.updatedAt = data.updatedAt;
+        normalized.progress = data.progress || {};
         normalized.presets.male.heads = data.presets.male?.heads || {};
         normalized.presets.female.heads = data.presets.female?.heads || {};
       }
@@ -725,6 +753,18 @@
     function saveLocal() {
       state.updatedAt = new Date().toISOString();
       localStorage.setItem(storageKey, JSON.stringify(state));
+    }
+
+    function rememberProgress(gender = currentGender()) {
+      if (!sequence.length) return;
+      state.progress ||= {};
+      state.progress[gender] ||= {};
+      state.progress[gender].sequenceIndex = sequenceIndex;
+    }
+
+    function saveProgress(gender = currentGender()) {
+      rememberProgress(gender);
+      saveLocal();
     }
 
     function currentGender() {
@@ -782,7 +822,10 @@
       } else if (layer === 'head') {
         head.head = clean;
       }
-      if (options.save !== false) saveLocal();
+      if (options.save !== false) {
+        rememberProgress(gender);
+        saveLocal();
+      }
     }
 
     function saveCurrent() {
@@ -831,7 +874,23 @@
       return embeddedAssets[path] || path;
     }
 
-    function buildSequence(gender) {
+    function sequenceItemSaved(item) {
+      const head = state.presets[item.gender]?.heads?.[item.headId];
+      if (!head) return false;
+      if (item.stage === 'eyes') return Boolean(head.eyes?.[item.eyesId]);
+      const hair = head.hair?.[item.hairId];
+      if (item.stage === 'hairBack') return Boolean(hair?.back);
+      if (item.stage === 'hairFront') return Boolean(hair?.front);
+      return Boolean(head.head);
+    }
+
+    function inferredSequenceIndex() {
+      if (!sequence.length) return 0;
+      const firstMissing = sequence.findIndex(item => !sequenceItemSaved(item));
+      return firstMissing < 0 ? sequence.length - 1 : firstMissing;
+    }
+
+    function buildSequence(gender, options = {}) {
       sequence = [];
       for (const headPath of assets[gender].heads) {
         const headId = idFromPath(headPath);
@@ -857,7 +916,15 @@
           }
         }
       }
-      sequenceIndex = 0;
+      const savedIndex = state.progress?.[gender]?.sequenceIndex;
+      if (options.reset) {
+        sequenceIndex = 0;
+      } else if (options.infer || savedIndex == null) {
+        sequenceIndex = inferredSequenceIndex();
+      } else {
+        sequenceIndex = Math.max(0, Math.min(sequence.length - 1, savedIndex));
+      }
+      saveProgress(gender);
       applySequenceItem();
     }
 
@@ -1024,6 +1091,7 @@
       } else {
         gesture = null;
         els.stage.classList.remove('dragging');
+        rememberProgress();
         saveLocal();
         updateJsonBox();
       }
@@ -1033,6 +1101,24 @@
       if (!sequence.length) buildSequence(currentGender());
       saveCurrent();
       sequenceIndex = Math.max(0, Math.min(sequence.length - 1, sequenceIndex + delta));
+      saveProgress();
+      applySequenceItem();
+    }
+
+    function jumpToPass(value) {
+      if (!sequence.length) buildSequence(currentGender());
+      const pass = Math.floor(Number(value));
+      if (!Number.isFinite(pass)) return;
+      saveCurrent();
+      sequenceIndex = Math.max(0, Math.min(sequence.length - 1, pass - 1));
+      saveProgress();
+      applySequenceItem();
+    }
+
+    function jumpToFirstUnfinished() {
+      if (!sequence.length) buildSequence(currentGender());
+      sequenceIndex = inferredSequenceIndex();
+      saveProgress();
       applySequenceItem();
     }
 
@@ -1059,6 +1145,8 @@
       const total = sequence.length ||
         assets[gender].heads.length * (assets[gender].hairs.length * 2 + assets[gender].eyes.length);
       const indexText = sequence.length ? `${sequenceIndex + 1}/${total}` : `ручной режим, всего ${total}`;
+      els.pass.max = total;
+      els.pass.value = sequence.length ? sequenceIndex + 1 : 1;
       const headCount = Object.keys(state.presets[gender].heads).length;
       const stage = sequence[sequenceIndex]?.stage || activeLayer;
       els.status.innerHTML = `
@@ -1159,6 +1247,8 @@
     };
     document.getElementById('prevBtn').onclick = () => moveNext(-1);
     document.getElementById('nextBtn').onclick = () => moveNext(1);
+    document.getElementById('jumpPassBtn').onclick = () => jumpToPass(els.pass.value);
+    document.getElementById('findPlaceBtn').onclick = jumpToFirstUnfinished;
     document.getElementById('saveBtn').onclick = saveCurrent;
     document.getElementById('resetBtn').onclick = resetCurrent;
     document.getElementById('copyPrevHairBtn').onclick = () => copyPrevious('hair');
