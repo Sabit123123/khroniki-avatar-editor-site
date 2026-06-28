@@ -441,20 +441,26 @@
       state.tweak.x = Number(els.x.value || 0);
       state.tweak.y = Number(els.y.value || 0);
       state.tweak.scale = Number(els.scaleNumber.value || els.scale.value || 0.28);
+      storeCurrent();
       render();
     }
 
-    function saveCurrent() {
+    function storeCurrent() {
       state.saved[keyForCurrent()] = {
         x: Number(state.tweak.x),
         y: Number(state.tweak.y),
         scale: Number(state.tweak.scale)
       };
       persist();
+    }
+
+    function saveCurrent() {
+      storeCurrent();
       render();
     }
 
     function moveCurrent(delta) {
+      storeCurrent();
       const next = state.bodyIndex + delta;
       if (next < 0) {
         state.bodyIndex = bodies().length - 1;
@@ -471,6 +477,7 @@
     function nudge(dx, dy, step) {
       state.tweak.x = Number((state.tweak.x + dx * step).toFixed(2));
       state.tweak.y = Number((state.tweak.y + dy * step).toFixed(2));
+      storeCurrent();
       render();
     }
 
@@ -511,37 +518,125 @@
       ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
     }
 
-    let drag = null;
-    els.stage.addEventListener('pointerdown', event => {
-      els.stage.setPointerCapture(event.pointerId);
-      drag = {
-        x: event.clientX,
-        y: event.clientY,
+    const pointers = new Map();
+    let gesture = null;
+
+    function distanceBetween(a, b) {
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+
+    function midpointBetween(a, b) {
+      return {
+        x: (a.clientX + b.clientX) / 2,
+        y: (a.clientY + b.clientY) / 2
+      };
+    }
+
+    function startDrag(pointer) {
+      gesture = {
+        type: 'drag',
+        pointerId: pointer.pointerId,
+        x: pointer.clientX,
+        y: pointer.clientY,
         startX: state.tweak.x,
         startY: state.tweak.y
       };
+    }
+
+    function startPinch() {
+      const activePointers = [...pointers.values()];
+      if (activePointers.length < 2) return;
+      const [a, b] = activePointers;
+      gesture = {
+        type: 'pinch',
+        startDistance: Math.max(1, distanceBetween(a, b)),
+        startMid: midpointBetween(a, b),
+        startX: state.tweak.x,
+        startY: state.tweak.y,
+        startScale: state.tweak.scale
+      };
+    }
+
+    function applyGesture() {
+      if (!gesture) return;
+      const rect = els.stage.getBoundingClientRect();
+      const ratio = 520 / rect.width;
+
+      if (gesture.type === 'drag') {
+        const pointer = pointers.get(gesture.pointerId);
+        if (!pointer) return;
+        state.tweak.x = Number((gesture.startX + (pointer.clientX - gesture.x) * ratio).toFixed(2));
+        state.tweak.y = Number((gesture.startY + (pointer.clientY - gesture.y) * ratio).toFixed(2));
+        render();
+        return;
+      }
+
+      if (gesture.type === 'pinch' && pointers.size >= 2) {
+        const [a, b] = [...pointers.values()];
+        const distance = Math.max(1, distanceBetween(a, b));
+        const mid = midpointBetween(a, b);
+        state.tweak.x = Number((gesture.startX + (mid.x - gesture.startMid.x) * ratio).toFixed(2));
+        state.tweak.y = Number((gesture.startY + (mid.y - gesture.startMid.y) * ratio).toFixed(2));
+        state.tweak.scale = Number(Math.max(0.05, Math.min(1.2, gesture.startScale * distance / gesture.startDistance)).toFixed(4));
+        render();
+      }
+    }
+
+    function finishGesture(pointerId) {
+      pointers.delete(pointerId);
+      if (pointers.size >= 2) {
+        startPinch();
+      } else if (pointers.size === 1) {
+        startDrag([...pointers.values()][0]);
+      } else {
+        gesture = null;
+        storeCurrent();
+        render();
+      }
+    }
+
+    els.stage.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      els.stage.setPointerCapture(event.pointerId);
+      pointers.set(event.pointerId, event);
+      if (pointers.size >= 2) {
+        startPinch();
+      } else {
+        startDrag(event);
+      }
     });
 
     els.stage.addEventListener('pointermove', event => {
-      if (!drag) return;
-      const rect = els.stage.getBoundingClientRect();
-      const ratio = 520 / rect.width;
-      state.tweak.x = Number((drag.startX + (event.clientX - drag.x) * ratio).toFixed(2));
-      state.tweak.y = Number((drag.startY + (event.clientY - drag.y) * ratio).toFixed(2));
-      render();
+      if (!pointers.has(event.pointerId)) return;
+      event.preventDefault();
+      pointers.set(event.pointerId, event);
+      applyGesture();
     });
 
-    els.stage.addEventListener('pointerup', () => { drag = null; });
-    els.stage.addEventListener('pointercancel', () => { drag = null; });
+    els.stage.addEventListener('pointerup', event => {
+      event.preventDefault();
+      finishGesture(event.pointerId);
+    });
+    els.stage.addEventListener('pointercancel', event => {
+      finishGesture(event.pointerId);
+    });
 
-    els.maleBtn.addEventListener('click', () => setGender('male'));
-    els.femaleBtn.addEventListener('click', () => setGender('female'));
+    els.maleBtn.addEventListener('click', () => {
+      storeCurrent();
+      setGender('male');
+    });
+    els.femaleBtn.addEventListener('click', () => {
+      storeCurrent();
+      setGender('female');
+    });
     els.bodySelect.addEventListener('change', () => {
+      storeCurrent();
       state.bodyIndex = Number(els.bodySelect.value);
       loadSavedOrPreset();
       render();
     });
     els.headSelect.addEventListener('change', () => {
+      storeCurrent();
       state.headIndex = Number(els.headSelect.value);
       loadSavedOrPreset();
       render();
@@ -550,6 +645,7 @@
     document.getElementById('nextBtn').addEventListener('click', () => moveCurrent(1));
     document.getElementById('resetBtn').addEventListener('click', () => {
       state.tweak = { ...presets[state.gender] };
+      storeCurrent();
       render();
     });
     document.getElementById('saveBtn').addEventListener('click', saveCurrent);

@@ -828,6 +828,31 @@
       }
     }
 
+    function setActiveTweak(layer, tweak, options = {}) {
+      const clean = cloneTweak(tweak);
+      if (layer !== 'head') {
+        setTweak(layer, clean, options);
+        return;
+      }
+
+      const before = tweakFor('head');
+      const factor = before.scale > 0 ? clean.scale / before.scale : 1;
+      setTweak('head', clean, { save: false });
+
+      if (Number.isFinite(factor) && Math.abs(factor - 1) > 0.0001) {
+        for (const linkedLayer of ['eyes', 'hairBack', 'hairFront']) {
+          const linked = tweakFor(linkedLayer);
+          linked.scale = round(Math.max(0.02, Math.min(1.5, linked.scale * factor)), 4);
+          setTweak(linkedLayer, linked, { save: false });
+        }
+      }
+
+      if (options.save !== false) {
+        rememberProgress();
+        saveLocal();
+      }
+    }
+
     function saveCurrent() {
       for (const layer of ['head', 'eyes', 'hairBack', 'hairFront']) {
         setTweak(layer, tweakFor(layer));
@@ -984,7 +1009,7 @@
     }
 
     function updateActiveFromInputs() {
-      setTweak(activeLayer, {
+      setActiveTweak(activeLayer, {
         dx: Number(els.dx.value),
         dy: Number(els.dy.value),
         scale: Number(els.scale.value),
@@ -997,14 +1022,14 @@
       const tweak = tweakFor(activeLayer);
       tweak.dx = round(tweak.dx + dx * step);
       tweak.dy = round(tweak.dy + dy * step);
-      setTweak(activeLayer, tweak);
+      setActiveTweak(activeLayer, tweak);
       render();
     }
 
     function scaleActive(direction) {
       const tweak = tweakFor(activeLayer);
       tweak.scale = round(Math.max(0.02, tweak.scale + direction * 0.005), 4);
-      setTweak(activeLayer, tweak);
+      setActiveTweak(activeLayer, tweak);
       render();
     }
 
@@ -1061,7 +1086,7 @@
         const next = cloneTweak(gesture.startTweak);
         next.dx = round(gesture.startTweak.dx + (pointer.clientX - gesture.startX) / unit);
         next.dy = round(gesture.startTweak.dy + (pointer.clientY - gesture.startY) / unit);
-        setTweak(gesture.layer, next, { save: false });
+        setActiveTweak(gesture.layer, next, { save: false });
         render();
         return;
       }
@@ -1077,7 +1102,7 @@
           Math.max(0.02, Math.min(1.5, gesture.startTweak.scale * distance / gesture.startDistance)),
           4,
         );
-        setTweak(gesture.layer, next, { save: false });
+        setActiveTweak(gesture.layer, next, { save: false });
         render();
       }
     }
