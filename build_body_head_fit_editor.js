@@ -239,19 +239,19 @@ const html = extractHtmlTemplate();
         </div>
         <div>
           <label for="scaleNumber">scale</label>
-          <input id="scaleNumber" type="number" step="0.005" min="0.6" max="1.5">
+          <input id="scaleNumber" type="number" step="0.005" min="0.2" max="1.5">
         </div>
       </div>
-      <input id="scaleInput" type="range" min="0.6" max="1.5" step="0.005">
+      <input id="scaleInput" type="range" min="0.2" max="1.5" step="0.005">
       <h2>Общий размер пола</h2>
       <div class="row">
         <div>
           <label for="genderScaleNumber">Размер голов</label>
-          <input id="genderScaleNumber" type="number" step="0.005" min="0.75" max="1.15">
+          <input id="genderScaleNumber" type="number" step="0.005" min="0.5" max="1.15">
         </div>
         <button id="resetGenderScaleBtn" type="button">Сброс размера</button>
       </div>
-      <input id="genderScaleInput" type="range" min="0.75" max="1.15" step="0.005">
+      <input id="genderScaleInput" type="range" min="0.5" max="1.15" step="0.005">
       <div class="row-3">
         <button class="hidden" type="button"></button>
         <button data-nudge="0,-1" type="button">Вверх</button>
@@ -532,7 +532,7 @@ __SHARED_ASSETS_BLOCK__
 
     function setCurrentGenderScale(value) {
       bodyState.genderScale ||= { ...genderScaleDefaults };
-      bodyState.genderScale[gender] = round(Math.max(0.75, Math.min(1.15, Number(value) || 1)), 4);
+      bodyState.genderScale[gender] = round(Math.max(0.5, Math.min(1.15, Number(value) || 1)), 4);
       saveBodyState();
     }
 
@@ -853,7 +853,7 @@ __SHARED_ASSETS_BLOCK__
         const next = cloneTweak(gesture.startTweak);
         next.dx = round(gesture.startTweak.dx + (mid.x - gesture.startMid.x) / unit);
         next.dy = round(gesture.startTweak.dy + (mid.y - gesture.startMid.y) / unit);
-        next.scale = round(Math.max(0.6, Math.min(1.5, gesture.startTweak.scale * distance / gesture.startDistance)), 4);
+        next.scale = round(Math.max(0.2, Math.min(1.5, gesture.startTweak.scale * distance / gesture.startDistance)), 4);
         setBodyPreset(next);
         render();
       }
