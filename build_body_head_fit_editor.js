@@ -460,11 +460,14 @@ __SHARED_ASSETS_BLOCK__
       const dir = nextGender === 'male' ? 'male' : 'female';
       const levels = nextGender === 'male'
         ? Array.from({ length: 11 }, (_, i) => i + 1)
-        : Array.from({ length: 4 }, (_, i) => i + 8);
+        : Array.from({ length: 11 }, (_, i) => i + 1);
       return levels.flatMap(level => Array.from({ length: 10 }, (_, i) => {
         const number = i + 1;
         const id = `outfit_${prefix}_lvl${pad(level)}_fullbody_${pad(number)}`;
-        return { id, level, number, path: `${bodyRoot}/${dir}/${id}_hq.png` };
+        const fileName = nextGender === 'female' && level < 8
+          ? `outfit_f_lvl${pad(level)}_a_${pad(number)}_hq.png`
+          : `${id}_hq.png`;
+        return { id, level, number, path: `${bodyRoot}/${dir}/${fileName}` };
       }));
     }
 
