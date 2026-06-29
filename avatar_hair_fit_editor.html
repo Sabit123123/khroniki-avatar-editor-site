@@ -681,6 +681,7 @@
 
     const femaleDefaults = {
       ...defaults,
+      eyes: { dx: 0, dy: -29.5, scale: 0.16 },
       hairBack: { dx: -0.9, dy: -39.5, scale: 0.16 },
       hairFront: { dx: -0.9, dy: -44.5, scale: 0.135 },
     };
@@ -778,10 +779,6 @@
       return els.gender.value;
     }
 
-    function currentBaseDefaults() {
-      return currentGender() === 'female' ? femaleDefaults : defaults;
-    }
-
     function currentIds() {
       const gender = currentGender();
       const headId = els.head.value;
@@ -806,10 +803,29 @@
       };
     }
 
+    function firstFemaleHeadId() {
+      return idFromPath(assets.female.heads[0]);
+    }
+
+    function femaleTemplateTweak(layer, eyesId, hairId) {
+      const template = state.presets.female?.heads?.[firstFemaleHeadId()];
+      if (!template) return null;
+      if (layer === 'eyes') return template.eyes?.[eyesId] || null;
+      if (layer === 'hairBack') return template.hair?.[hairId]?.back || null;
+      if (layer === 'hairFront') return template.hair?.[hairId]?.front || null;
+      return null;
+    }
+
+    function baseTweakFor(layer, gender, eyesId, hairId) {
+      const base = (gender === 'female' ? femaleDefaults : defaults)[layer] || defaults[layer];
+      const template = gender === 'female' ? femaleTemplateTweak(layer, eyesId, hairId) : null;
+      return template || base;
+    }
+
     function tweakFor(layer) {
       const { gender, headId, eyesId, hairId } = currentIds();
       const head = state.presets[gender].heads[headId];
-      const base = currentBaseDefaults()[layer] || defaults[layer];
+      const base = baseTweakFor(layer, gender, eyesId, hairId);
       if (!head) return cloneTweak(base);
       if (layer === 'eyes') return cloneTweak(head.eyes?.[eyesId] || base);
       if (layer === 'hairBack') return cloneTweak(head.hair?.[hairId]?.back || base);
