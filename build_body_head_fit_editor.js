@@ -167,6 +167,26 @@ const html = extractHtmlTemplate();
         <button id="prevBtn" type="button">Назад</button>
         <button id="nextBtn" type="button" class="primary">Далее</button>
       </div>
+    </section>
+
+    <section class="stage-panel">
+      <div class="stage-wrap">
+        <div id="stage" class="stage">
+          <img id="bodyImg" class="avatar-layer" alt="">
+          <div id="headGroup" class="head-group">
+            <img id="hairBackImg" class="avatar-layer" alt="">
+            <img id="headImg" class="avatar-layer" alt="">
+            <img id="eyesImg" class="avatar-layer" alt="">
+            <img id="hairFrontImg" class="avatar-layer" alt="">
+          </div>
+          <div class="crosshair"></div>
+        </div>
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="panel stack">
+      <h2>Тело и проверочная голова</h2>
       <div>
         <label for="passInput">Номер тела</label>
         <input id="passInput" type="number" min="1" step="1">
@@ -202,22 +222,6 @@ const html = extractHtmlTemplate();
         <label for="hairSelect">Волосы</label>
         <select id="hairSelect"></select>
       </div>
-    </section>
-
-    <section class="stage-panel">
-      <div class="stage-wrap">
-        <div id="stage" class="stage">
-          <img id="bodyImg" class="avatar-layer" alt="">
-          <div id="headGroup" class="head-group">
-            <img id="hairBackImg" class="avatar-layer" alt="">
-            <img id="headImg" class="avatar-layer" alt="">
-            <img id="eyesImg" class="avatar-layer" alt="">
-            <img id="hairFrontImg" class="avatar-layer" alt="">
-          </div>
-          <div class="crosshair"></div>
-        </div>
-      </div>
-      <div id="status" class="status"></div>
     </section>
 
     <section class="panel stack">
