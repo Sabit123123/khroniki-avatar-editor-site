@@ -286,9 +286,11 @@ __SHARED_ASSETS_BLOCK__
 
     const hairStorageKey = 'khroniki.avatarHairFit.v1';
     const bodyStorageKey = 'khroniki.avatarBodyHeadFit.v1';
+    const bodyRenderVersion = 2;
+    const internalEditorZoom = 2.25;
     const bodyRoot = 'avatar_editor_hq_assets';
     const outfitDefault = { dx: -0.3, dy: 9.18, scale: 0.82 };
-    const groupDefault = { dx: 0, dy: 0, scale: 1 };
+    const groupDefault = { dx: 0, dy: 0, scale: 0.4444 };
 
     const els = {
       maleBtn: document.getElementById('maleBtn'),
@@ -342,6 +344,7 @@ __SHARED_ASSETS_BLOCK__
       return {
         version: 1,
         unit: 'RewardAvatarStack headGroup AvatarLayerTweak dx/dy/scale',
+        renderVersion: bodyRenderVersion,
         createdAt: new Date().toISOString(),
         progress: { male: { bodyIndex: 0 }, female: { bodyIndex: 0 } },
         presets: { male: { bodies: {} }, female: { bodies: {} } },
@@ -366,6 +369,7 @@ __SHARED_ASSETS_BLOCK__
       if (data?.presets) {
         normalized.version = data.version || 1;
         normalized.unit = data.unit || normalized.unit;
+        normalized.renderVersion = data.renderVersion || 1;
         normalized.createdAt = data.createdAt || normalized.createdAt;
         normalized.updatedAt = data.updatedAt;
         normalized.progress = data.progress || normalized.progress;
@@ -378,6 +382,16 @@ __SHARED_ASSETS_BLOCK__
       normalized.presets.female ||= { bodies: {} };
       normalized.presets.male.bodies ||= {};
       normalized.presets.female.bodies ||= {};
+      if (normalized.renderVersion !== bodyRenderVersion) {
+        for (const bodies of [normalized.presets.male.bodies, normalized.presets.female.bodies]) {
+          for (const tweak of Object.values(bodies || {})) {
+            if (Number.isFinite(Number(tweak?.scale))) {
+              tweak.scale = round(Number(tweak.scale) / internalEditorZoom, 4);
+            }
+          }
+        }
+        normalized.renderVersion = bodyRenderVersion;
+      }
       return normalized;
     }
 
@@ -392,6 +406,7 @@ __SHARED_ASSETS_BLOCK__
     }
 
     function saveBodyState() {
+      bodyState.renderVersion = bodyRenderVersion;
       bodyState.updatedAt = new Date().toISOString();
       localStorage.setItem(bodyStorageKey, JSON.stringify(bodyState));
     }
@@ -596,7 +611,7 @@ __SHARED_ASSETS_BLOCK__
 
     function renderLayer(layer, tweak) {
       const unit = els.stage.clientWidth / 128;
-      els.imgs[layer].style.transform = `translate(${tweak.dx * unit}px, ${tweak.dy * unit}px) scale(${tweak.scale})`;
+      els.imgs[layer].style.transform = `translate(${tweak.dx * unit}px, ${tweak.dy * unit}px) scale(${tweak.scale * internalEditorZoom})`;
     }
 
     function render() {
