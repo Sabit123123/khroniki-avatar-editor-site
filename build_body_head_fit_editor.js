@@ -172,9 +172,11 @@ const html = extractHtmlTemplate();
     <section class="stage-panel">
       <div class="stage-wrap">
         <div id="stage" class="stage">
+          <div id="hairBackGroup" class="head-group">
+            <img id="hairBackImg" class="avatar-layer" alt="">
+          </div>
           <img id="bodyImg" class="avatar-layer" alt="">
           <div id="headGroup" class="head-group">
-            <img id="hairBackImg" class="avatar-layer" alt="">
             <img id="headImg" class="avatar-layer" alt="">
             <img id="eyesImg" class="avatar-layer" alt="">
             <img id="hairFrontImg" class="avatar-layer" alt="">
@@ -241,6 +243,15 @@ const html = extractHtmlTemplate();
         </div>
       </div>
       <input id="scaleInput" type="range" min="0.6" max="1.5" step="0.005">
+      <h2>Общий размер пола</h2>
+      <div class="row">
+        <div>
+          <label for="genderScaleNumber">Размер голов</label>
+          <input id="genderScaleNumber" type="number" step="0.005" min="0.75" max="1.15">
+        </div>
+        <button id="resetGenderScaleBtn" type="button">Сброс размера</button>
+      </div>
+      <input id="genderScaleInput" type="range" min="0.75" max="1.15" step="0.005">
       <div class="row-3">
         <button class="hidden" type="button"></button>
         <button data-nudge="0,-1" type="button">Вверх</button>
@@ -295,6 +306,7 @@ __SHARED_ASSETS_BLOCK__
     const bodyRoot = 'avatar_editor_hq_assets';
     const outfitDefault = { dx: -0.3, dy: 9.18, scale: 0.82 };
     const groupDefault = { dx: 0, dy: 0, scale: 0.4444 };
+    const genderScaleDefaults = { male: 1, female: 0.94 };
 
     const els = {
       maleBtn: document.getElementById('maleBtn'),
@@ -312,6 +324,7 @@ __SHARED_ASSETS_BLOCK__
       hairSelect: document.getElementById('hairSelect'),
       stage: document.getElementById('stage'),
       body: document.getElementById('bodyImg'),
+      hairBackGroup: document.getElementById('hairBackGroup'),
       headGroup: document.getElementById('headGroup'),
       imgs: {
         hairBack: document.getElementById('hairBackImg'),
@@ -324,6 +337,9 @@ __SHARED_ASSETS_BLOCK__
       dy: document.getElementById('dyInput'),
       scale: document.getElementById('scaleInput'),
       scaleNumber: document.getElementById('scaleNumber'),
+      genderScale: document.getElementById('genderScaleInput'),
+      genderScaleNumber: document.getElementById('genderScaleNumber'),
+      resetGenderScaleBtn: document.getElementById('resetGenderScaleBtn'),
       step: document.getElementById('stepInput'),
       zoom: document.getElementById('zoomSelect'),
       saveBtn: document.getElementById('saveBtn'),
@@ -350,6 +366,7 @@ __SHARED_ASSETS_BLOCK__
         unit: 'RewardAvatarStack headGroup AvatarLayerTweak dx/dy/scale',
         renderVersion: bodyRenderVersion,
         createdAt: new Date().toISOString(),
+        genderScale: { ...genderScaleDefaults },
         progress: { male: { bodyIndex: 0 }, female: { bodyIndex: 0 } },
         presets: { male: { bodies: {} }, female: { bodies: {} } },
       };
@@ -376,12 +393,23 @@ __SHARED_ASSETS_BLOCK__
         normalized.renderVersion = data.renderVersion || 1;
         normalized.createdAt = data.createdAt || normalized.createdAt;
         normalized.updatedAt = data.updatedAt;
+        normalized.genderScale = {
+          ...genderScaleDefaults,
+          ...(data.genderScale || {}),
+        };
         normalized.progress = data.progress || normalized.progress;
         normalized.presets.male.bodies = data.presets.male?.bodies || {};
         normalized.presets.female.bodies = data.presets.female?.bodies || {};
       }
       normalized.progress.male ||= { bodyIndex: 0 };
       normalized.progress.female ||= { bodyIndex: 0 };
+      normalized.genderScale ||= { ...genderScaleDefaults };
+      normalized.genderScale.male = Number.isFinite(Number(normalized.genderScale.male))
+        ? Number(normalized.genderScale.male)
+        : genderScaleDefaults.male;
+      normalized.genderScale.female = Number.isFinite(Number(normalized.genderScale.female))
+        ? Number(normalized.genderScale.female)
+        : genderScaleDefaults.female;
       normalized.presets.male ||= { bodies: {} };
       normalized.presets.female ||= { bodies: {} };
       normalized.presets.male.bodies ||= {};
@@ -496,6 +524,16 @@ __SHARED_ASSETS_BLOCK__
 
     function bodyPreset() {
       return bodyState.presets[gender].bodies[currentBody().id] || cloneTweak(groupDefault);
+    }
+
+    function currentGenderScale() {
+      return Number(bodyState.genderScale?.[gender] || genderScaleDefaults[gender] || 1);
+    }
+
+    function setCurrentGenderScale(value) {
+      bodyState.genderScale ||= { ...genderScaleDefaults };
+      bodyState.genderScale[gender] = round(Math.max(0.75, Math.min(1.15, Number(value) || 1)), 4);
+      saveBodyState();
     }
 
     function setBodyPreset(tweak) {
@@ -625,10 +663,12 @@ __SHARED_ASSETS_BLOCK__
       const unit = els.stage.clientWidth / 128;
       const viewZoom = Number(els.zoom.value || 1);
       const viewY = viewZoom === 1 ? 0 : (viewZoom === 1.35 ? 30 : 48);
+      const finalHeadScale = group.scale * currentGenderScale() * viewZoom;
 
       els.body.src = body.path;
       els.body.style.transform = `translate(${outfitDefault.dx * unit}px, ${(outfitDefault.dy + viewY) * unit}px) scale(${outfitDefault.scale * viewZoom})`;
-      els.headGroup.style.transform = `translate(${group.dx * unit}px, ${(group.dy + viewY) * unit}px) scale(${group.scale * viewZoom})`;
+      els.hairBackGroup.style.transform = `translate(${group.dx * unit}px, ${(group.dy + viewY) * unit}px) scale(${finalHeadScale})`;
+      els.headGroup.style.transform = `translate(${group.dx * unit}px, ${(group.dy + viewY) * unit}px) scale(${finalHeadScale})`;
 
       els.imgs.hairBack.src = sourceFor(ids.hair.back);
       els.imgs.head.src = sourceFor(assets[gender].heads.find(path => idFromPath(path) === ids.headId) || assets[gender].heads[0]);
@@ -644,6 +684,8 @@ __SHARED_ASSETS_BLOCK__
       els.dy.value = round(group.dy);
       els.scale.value = round(group.scale, 4);
       els.scaleNumber.value = round(group.scale, 4);
+      els.genderScale.value = round(currentGenderScale(), 4);
+      els.genderScaleNumber.value = round(currentGenderScale(), 4);
       els.maleBtn.classList.toggle('active', gender === 'male');
       els.femaleBtn.classList.toggle('active', gender === 'female');
       updateStatus();
@@ -660,6 +702,7 @@ __SHARED_ASSETS_BLOCK__
       els.status.innerHTML = `
         <b>${gender === 'male' ? 'Мужской' : 'Женский'} проход:</b> ${bodyIndex + 1}/${totalBodies}<br>
         Тело: <b>${body.id}</b>, сохранено тел: <b>${savedBodies}/${totalBodies}</b><br>
+        Общий размер голов пола: <b>${round(currentGenderScale(), 4)}</b><br>
         Проверочная голова: <b>${ids.headId}</b>, глаза: <b>${ids.eyesId}</b>, волосы: <b>${ids.hairId}</b><br>
         Сохраненные головы: мужские <b>${male.heads}</b>, женские <b>${female.heads}</b>. Если здесь нули, вставь экспорт из редактора волос в поле JSON и нажми импорт.
       `;
@@ -711,6 +754,7 @@ __SHARED_ASSETS_BLOCK__
         female,
         bodyStorageKey,
         bodyUpdatedAt: bodyState.updatedAt || null,
+        genderScale: bodyState.genderScale || null,
         savedBodies: {
           male: Object.keys(bodyState.presets.male.bodies || {}).length,
           female: Object.keys(bodyState.presets.female.bodies || {}).length,
@@ -842,6 +886,20 @@ __SHARED_ASSETS_BLOCK__
     els.dy.addEventListener('change', updateFromInputs);
     els.scale.addEventListener('input', () => { els.scaleNumber.value = els.scale.value; updateFromInputs(); });
     els.scaleNumber.addEventListener('change', () => { els.scale.value = els.scaleNumber.value; updateFromInputs(); });
+    els.genderScale.addEventListener('input', () => {
+      els.genderScaleNumber.value = els.genderScale.value;
+      setCurrentGenderScale(els.genderScale.value);
+      render();
+    });
+    els.genderScaleNumber.addEventListener('change', () => {
+      els.genderScale.value = els.genderScaleNumber.value;
+      setCurrentGenderScale(els.genderScaleNumber.value);
+      render();
+    });
+    els.resetGenderScaleBtn.addEventListener('click', () => {
+      setCurrentGenderScale(genderScaleDefaults[gender] || 1);
+      render();
+    });
     els.zoom.addEventListener('change', render);
     els.saveBtn.addEventListener('click', () => saveCurrent());
     els.resetBtn.addEventListener('click', resetCurrentBody);
